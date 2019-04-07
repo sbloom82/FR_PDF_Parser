@@ -32,6 +32,7 @@ namespace FR_PRF_Parser
                     string pageText = PdfTextExtractor.GetTextFromPage(reader, page + 1);
                     sw.Write(pageText);
 
+
                 }
             }
             reader.Close();
@@ -283,9 +284,13 @@ namespace FR_PRF_Parser
         private static short GetSize(string hexLimits)
         {
             string[] parts = hexLimits.Split(new string[] { "..." }, StringSplitOptions.None);
-            if (parts.Length <= 3)
+            if (parts[1].Length <= 3)
             {
                 return 1;
+            }
+            else if (parts[1].Length > 5)
+            {
+                return 4;
             }
             return 2;
         }

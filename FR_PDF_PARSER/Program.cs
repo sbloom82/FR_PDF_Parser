@@ -259,7 +259,7 @@ namespace FR_PRF_Parser
                     foreach (Variable v in matchingVars)
                     {
                         v.Size = GetSize(hexLimits);
-                        v.Signed = !hexLimits.StartsWith("0") || physLimits.StartsWith("-");
+                        v.Signed = !hexLimits.StartsWith("0");
                         v.MinValue = GetMin(physLimits);
                         v.MaxValue = GetMax(physLimits);
                         v.Resolution = GetResolution(resolution);

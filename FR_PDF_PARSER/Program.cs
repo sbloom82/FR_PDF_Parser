@@ -104,14 +104,14 @@ namespace FR_PRF_Parser
 
             reader.Close();
 
-            List<Variable> parsed = Variables.variables.Where(v => v.Parsed).OrderBy(v => v.Name).ToList();
+            List<Variable> parsed = Variables.variables.Where(v => v.Parsed).OrderBy(v => v.Address).ToList();
             XmlSerializer ser = new XmlSerializer(typeof(List<Variable>));
             using (FileStream fs = new FileStream(@"c:\temp\parsedVariables.xml", FileMode.Create))
             {
                 ser.Serialize(fs, parsed);
             }
 
-            List<Variable> unparsed = Variables.variables.Where(v => !v.Parsed).OrderBy(v => v.Name).ToList();
+            List<Variable> unparsed = Variables.variables.Where(v => !v.Parsed).OrderBy(v => v.Address).ToList();
             using (FileStream fs = new FileStream(@"c:\temp\unparsedVariables.xml", FileMode.Create))
             {
                 ser.Serialize(fs, unparsed);
@@ -129,7 +129,7 @@ namespace FR_PRF_Parser
             {
                 for (int i = 0; i < minVarNameLength; ++i)
                 {
-                    if (line[i] != '_' && !char.IsUpper(line[i]))
+                    if (line[i] != '_' && !char.IsUpper(line[i]) && !char.IsDigit(line[i]))
                     {
                         return false;
                     }
@@ -259,7 +259,7 @@ namespace FR_PRF_Parser
                     foreach (Variable v in matchingVars)
                     {
                         v.Size = GetSize(hexLimits);
-                        v.Signed = !hexLimits.StartsWith("0");
+                        v.Signed = !hexLimits.StartsWith("0") || physLimits.StartsWith("-");
                         v.MinValue = GetMin(physLimits);
                         v.MaxValue = GetMax(physLimits);
                         v.Resolution = GetResolution(resolution);

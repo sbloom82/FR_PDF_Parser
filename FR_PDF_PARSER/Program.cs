@@ -22,7 +22,8 @@ namespace FR_PRF_Parser
 
         public static void ParseDTCs(string[] args)
         {
-            PdfReader reader = new PdfReader(@"C:\Users\steve\Source\Repos\fr-pdf-parser\FR_PDF_PARSER\Siemens 3.0T Audi S4, S5, A6, Q7.pdf");
+            string pdf = @"C:\Users\steveb\Desktop\Logger\Simos85.pdf";
+            PdfReader reader = new PdfReader(pdf);// @"C:\Users\steve\Source\Repos\fr-pdf-parser\FR_PDF_PARSER\Siemens 3.0T Audi S4, S5, A6, Q7.pdf");
 
             List<DTC> dtcs = new List<DTC>();
             DTC current = null;
@@ -36,8 +37,9 @@ namespace FR_PRF_Parser
                 {
                     string line = lines[i].Trim();
 
-                    if (line.StartsWith("Symptom based diagnostics has also"))
+                    if (line.StartsWith("Symptom based diagnostics"))
                     {
+                        page = 999999999;
                         break;
                     }
 
@@ -45,47 +47,67 @@ namespace FR_PRF_Parser
                     DTC start = DTC.GetStartDTC(values);
                     if (start != null)
                     {
+                        if (current != null && current.Description.Length > 0)
+                        {
+                            current.Description = current.Description.Substring(0, current.Description.Length - 1);
+                        }
+
                         dtcs.Add(start);
 
+                        int startIndex = 0;
                         if (DTC.IsErrorName(values[0]) && DTC.IsErrorName(values[1]))
                         {
                             start.GlobalError = values[0];
                             start.ErrorLocation = values[1];
                             start.Description = "";
-                            for (int j = 2; j < start.DFCIndex - 1; ++j)
-                            {
-                                start.Description += values[j] + " ";
-                            }
-                            //start.Description = start.Description.Substring(0, start.Description.Length - 1);
+                            startIndex = 2;
                         }
                         else if (DTC.IsErrorName(values[0]))
                         {
                             start.GlobalError = current.GlobalError;
                             start.ErrorLocation = values[0];
                             start.Description = "";
-                            for (int j = 1; j < start.DFCIndex - 1; ++j)
-                            {
-                                start.Description += values[j] + " ";
-                            }
-                            //start.Description = start.Description.Substring(0, start.Description.Length - 1);
+                            startIndex = 1;                           
                         }
                         else
                         {
                             start.GlobalError = current.GlobalError;
                             start.ErrorLocation = current.ErrorLocation;
                             start.Description = "";
-                            for (int j = 0; j < start.DFCIndex - 1; ++j)
-                            {
-                                start.Description += values[j] + " ";
-                            }
-                            //start.Description = start.Description.Substring(0, start.Description.Length - 1);
+                            startIndex = 0;
+                        }
+
+                        for (int j = startIndex; j < start.DFCIndex - 1; ++j)
+                        {
+                            start.Description += values[j] + " ";
                         }
 
                         current = start;
                     }
                     else if (current != null)
                     {
+                        int startIndex = 0;
                         //DO STUFF TO ADD IN DESCRIPTION
+                        if (values.Length > 2 && DTC.IsErrorName(values[0]) && DTC.IsErrorName(values[1]))
+                        {
+                            current.GlobalError += values[0];
+                            current.ErrorLocation += values[1];
+                            startIndex = 2;
+                        }
+                        else if (values.Length > 1 && DTC.IsErrorName(values[0]))
+                        {
+                            startIndex = 1;
+                            current.GlobalError += values[0];
+                        }
+                        else
+                        {
+                            startIndex = 0;
+                        }
+
+                        for (int j = startIndex; j < values.Length; ++j)
+                        {
+                            current.Description += values[j] + " ";
+                        }
                     }                    
                 }
             }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Serialization;
 
 namespace FR_PRF_Parser
 {
@@ -19,29 +20,38 @@ namespace FR_PRF_Parser
         public string ErrorClass;
         public string Carb;//??
 
+        [XmlIgnore]
         public int DFCIndex;
 
         public static DTC GetStartDTC(string[] values)
         {
             if (values.Length > 5)
             {
-                string pcode1 = values[values.Length - 5];
-                string pcode2 = values[values.Length - 4];
-                string dfc = values[values.Length - 6];
-
-                if (IsPCode(pcode1) && IsPCode(pcode2) && dfc.Length == 4 && short.TryParse(dfc, out short dfcValue))
+                for (int i = values.Length - 1; i > 5; --i)
                 {
-                    return new DTC()
-                    {
-                        DFCCode = dfc,
-                        SAECode = pcode1,
-                        VAGCode = pcode2,
-                        ErrorType = values[values.Length - 3],
-                        ErrorClass = values[values.Length - 2],
-                        Carb = values[values.Length - 1],
+                    string pcode1 = values[i - 4];
+                    string pcode2 = values[i - 3];
+                    string dfc = values[i - 5];
 
-                        DFCIndex = values.Length - 6
-                    };
+                    if (IsPCode(pcode1) && IsPCode(pcode2) &&
+                        (dfc == "tbd" || (dfc.Length == 4 && short.TryParse(dfc, out short dfcValue))))
+                    {
+                        DTC dtc = new DTC()
+                        {
+                            DFCCode = dfc,
+                            SAECode = pcode1,
+                            VAGCode = pcode2,
+               
+                            ErrorClass = values[i - 1],
+                            Carb = values[i],
+
+                            DFCIndex = i - 5
+                        };
+
+                        dtc.ErrorType = values[i - 2];
+
+                        return dtc;
+                    }
                 }
             }
             return null;
@@ -51,7 +61,7 @@ namespace FR_PRF_Parser
         {
             foreach (char c in value)
             {
-                if (!char.IsUpper(c) && c != '_')
+                if (!char.IsUpper(c) && !char.IsNumber(c) && c != '_' && c != '/' && c != '(' && c != ')' && c != 'i')
                 {
                     return false;
                 }

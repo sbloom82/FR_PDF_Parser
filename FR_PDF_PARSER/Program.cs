@@ -16,7 +16,85 @@ namespace FR_PRF_Parser
         {
             //PassOne(args);
 
-            PassTwo(args);
+            //PassTwo(args);
+            ParseDTCs(args);
+        }
+
+        public static void ParseDTCs(string[] args)
+        {
+            PdfReader reader = new PdfReader(@"C:\Users\steve\Source\Repos\fr-pdf-parser\FR_PDF_PARSER\Siemens 3.0T Audi S4, S5, A6, Q7.pdf");
+
+            List<DTC> dtcs = new List<DTC>();
+            DTC current = null;
+            for (int page = 5383; page <= reader.NumberOfPages; ++page)
+            {
+                string pageText = PdfTextExtractor.GetTextFromPage(reader, page);
+
+                string[] lines = pageText.Split(new char[] { (char)0x0A }, StringSplitOptions.None);
+
+                for (int i = 0; i < lines.Length; ++i)
+                {
+                    string line = lines[i].Trim();
+
+                    if (line.StartsWith("Symptom based diagnostics has also"))
+                    {
+                        break;
+                    }
+
+                    string[] values =  line.Split(' ');
+                    DTC start = DTC.GetStartDTC(values);
+                    if (start != null)
+                    {
+                        dtcs.Add(start);
+
+                        if (DTC.IsErrorName(values[0]) && DTC.IsErrorName(values[1]))
+                        {
+                            start.GlobalError = values[0];
+                            start.ErrorLocation = values[1];
+                            start.Description = "";
+                            for (int j = 2; j < start.DFCIndex - 1; ++j)
+                            {
+                                start.Description += values[j] + " ";
+                            }
+                            //start.Description = start.Description.Substring(0, start.Description.Length - 1);
+                        }
+                        else if (DTC.IsErrorName(values[0]))
+                        {
+                            start.GlobalError = current.GlobalError;
+                            start.ErrorLocation = values[0];
+                            start.Description = "";
+                            for (int j = 1; j < start.DFCIndex - 1; ++j)
+                            {
+                                start.Description += values[j] + " ";
+                            }
+                            //start.Description = start.Description.Substring(0, start.Description.Length - 1);
+                        }
+                        else
+                        {
+                            start.GlobalError = current.GlobalError;
+                            start.ErrorLocation = current.ErrorLocation;
+                            start.Description = "";
+                            for (int j = 0; j < start.DFCIndex - 1; ++j)
+                            {
+                                start.Description += values[j] + " ";
+                            }
+                            //start.Description = start.Description.Substring(0, start.Description.Length - 1);
+                        }
+
+                        current = start;
+                    }
+                    else if (current != null)
+                    {
+                        //DO STUFF TO ADD IN DESCRIPTION
+                    }                    
+                }
+            }
+
+            XmlSerializer ser = new XmlSerializer(typeof(List<DTC>));
+            using (FileStream fs = new FileStream(@"c:\temp\parsedDTCS.xml", FileMode.Create))
+            {
+                ser.Serialize(fs, dtcs);
+            }
         }
 
 
@@ -31,7 +109,6 @@ namespace FR_PRF_Parser
 
                     string pageText = PdfTextExtractor.GetTextFromPage(reader, page + 1);
                     sw.Write(pageText);
-
 
                 }
             }

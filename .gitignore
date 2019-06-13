@@ -260,3 +260,5 @@ paket-files/
 __pycache__/
 *.pyc
 /FR_PDF_PARSER/Siemens 3.0T Audi S4, S5, A6, Q7.pdf
+/FR_PDF_PARSER/Simos18 Funktionsrahmen.pdf
+/FR_PDF_PARSER/MED17 2.0TSI.pdf

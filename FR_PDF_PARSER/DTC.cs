@@ -48,6 +48,7 @@ namespace FR_PRF_Parser
                             DFCIndex = i - 5
                         };
 
+                        dtc.Sym = values[i - 6];
                         dtc.ErrorType = values[i - 2];
 
                         return dtc;

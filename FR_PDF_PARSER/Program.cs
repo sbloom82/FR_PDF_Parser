@@ -1,11 +1,15 @@
 ﻿using iTextSharp.text.pdf;
 using iTextSharp.text.pdf.parser;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 using System.Xml.Serialization;
 
 namespace FR_PRF_Parser
@@ -17,7 +21,55 @@ namespace FR_PRF_Parser
             //PassOne(args);
 
             //PassTwo(args);
-            ParseDTCs(args);
+            // ParseDTCs(args);
+
+            TranslateDTCs(args);
+        }
+
+        public static void TranslateDTCs(string[] args)
+        {
+            List<DTC> dtcs = new List<DTC>();
+            XmlSerializer ser = new XmlSerializer(typeof(List<DTC>));
+            using (FileStream fs = new FileStream(@"c:\temp\parsedDTCS.xml", FileMode.Open))
+            {
+                dtcs = (List<DTC>)ser.Deserialize(fs);
+            }
+
+            foreach (DTC dtc in dtcs)
+            {
+                try
+                {
+                    dtc.Description = TranslateText(dtc.Description);
+                    Thread.Sleep(5000);// as to not spam
+                }
+                catch(Exception e)
+                { e = e; }
+            }
+
+            ser = new XmlSerializer(typeof(List<DTC>));
+            using (FileStream fs = new FileStream(@"c:\temp\translatedDTCS.xml", FileMode.Create))
+            {
+                ser.Serialize(fs, dtcs);
+            }
+        }
+
+        public static string TranslateText(string text)
+        {
+            //https://translate.googleapis.com/translate_a/single?client=gtx&sl=de&tl=en&dt=t&q=Kraftstoffniederdruc%20kpumpe%20Fehlerr%C3%BCckmeldung%20B
+            Uri uri = new Uri("https://translate.googleapis.com/translate_a/single?client=gtx&sl=de&tl=en&dt=t&q=" + HttpUtility.UrlEncode(text));
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(uri);
+            request.Timeout = 1000;
+            request.Method = "GET";
+            using (var response = request.GetResponse())
+            {
+                using (StreamReader streamReader = new StreamReader(response.GetResponseStream()))
+                {
+                    string content = streamReader.ReadToEnd();
+                    JArray arr = JArray.Parse(content);
+                    text = arr.First().First().First().ToString();
+                }
+            }
+            return text;
         }
 
         public static void ParseDTCs(string[] args)
@@ -42,8 +94,24 @@ namespace FR_PRF_Parser
                         page = 999999999;
                         break;
                     }
+                    else if (line.StartsWith("Designed by"))
+                    {
+                        //end of page
+                        break;
+                    }
+                    else if (line.StartsWith("Transmittal, reproduction") ||
+                        line.StartsWith("as well as utilisation") ||
+                        line.StartsWith("without express") ||
+                        line.StartsWith("for payment of damages") ||
+                        line.StartsWith("of a utility model") ||
+                        line.StartsWith("Chapter Part") ||
+                        line.StartsWith("Table of failures"))
+                    {
+                        //start of page
+                        continue;
+                    }
 
-                    string[] values =  line.Split(' ');
+                    string[] values = line.Split(' ');
                     DTC start = DTC.GetStartDTC(values);
                     if (start != null)
                     {
@@ -67,7 +135,7 @@ namespace FR_PRF_Parser
                             start.GlobalError = current.GlobalError;
                             start.ErrorLocation = values[0];
                             start.Description = "";
-                            startIndex = 1;                           
+                            startIndex = 1;
                         }
                         else
                         {
@@ -108,7 +176,7 @@ namespace FR_PRF_Parser
                         {
                             current.Description += values[j] + " ";
                         }
-                    }                    
+                    }
                 }
             }
 
